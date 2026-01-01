@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { LotteryPool } from '../utils/lotteryPool';
 import type { LotteryNumber, DrawRecord } from '../types';
 
@@ -85,7 +85,6 @@ export function useLotteryPool(
   ) => {
     // 保存已抽取的号码
     const currentDrawn = [...drawnNumbers];
-    const currentRemaining = pool.getRemainingNumbers();
     
     // 重置奖池
     pool.reset(minNumber, maxNumber, newBlacklist, newWhitelist);

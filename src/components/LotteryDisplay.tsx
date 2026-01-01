@@ -19,10 +19,6 @@ interface LotteryDisplayProps {
 export function LotteryDisplay({
   currentNumber,
   multipleNumbers,
-  isRolling,
-  onRollComplete,
-  animationDuration = 2500,
-  maxNumber = 300,
 }: LotteryDisplayProps) {
   const [displayNumber, setDisplayNumber] = useState<LotteryNumber | null>(currentNumber);
 

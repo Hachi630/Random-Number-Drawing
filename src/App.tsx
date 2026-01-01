@@ -26,7 +26,6 @@ function App() {
     drawHistory,
     remainingCount,
     draw,
-    drawMultiple,
     reset,
     restore,
     updateLists,
@@ -168,8 +167,6 @@ function App() {
           <LotteryDisplay
             currentNumber={currentNumber}
             multipleNumbers={multipleNumbers || undefined}
-            isRolling={false}
-            maxNumber={maxNumber}
           />
         </section>
 
