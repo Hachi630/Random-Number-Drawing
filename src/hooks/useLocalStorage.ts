@@ -1,5 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
-import type { LotteryNumber, DrawRecord, StoredData } from '../types';
+import type {
+  LotteryNumber,
+  DrawRecord,
+  PrizeConfig,
+  PrizeId,
+  StoredData,
+} from '../types';
 
 const STORAGE_KEY = 'lottery-system-data';
 
@@ -25,15 +31,23 @@ export function useLocalStorage() {
     blacklist: LotteryNumber[],
     whitelist: LotteryNumber[],
     drawHistory: DrawRecord[],
-    maxNumber?: number
+    minNumber: number,
+    maxNumber: number,
+    prizeState: PrizeConfig[],
+    currentPrize: PrizeId,
+    drawCount: number,
   ) => {
     const data: StoredData = {
+      minNumber,
+      maxNumber,
       drawnNumbers,
       remainingNumbers,
       blacklist,
       whitelist,
       drawHistory,
-      maxNumber,
+      prizeState,
+      currentPrize,
+      drawCount,
       timestamp: Date.now(),
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -73,19 +87,35 @@ export function useLocalStorage() {
     blacklist?: LotteryNumber[],
     whitelist?: LotteryNumber[],
     drawHistory?: DrawRecord[],
-    maxNumber?: number
+    minNumber?: number,
+    maxNumber?: number,
+    prizeState?: PrizeConfig[],
+    currentPrize?: PrizeId,
+    drawCount?: number,
   ) => {
     const currentData = loadData();
     if (!currentData) {
       // 如果没有现有数据，创建新数据
-      if (drawnNumbers && remainingNumbers) {
+      if (
+        drawnNumbers &&
+        remainingNumbers &&
+        minNumber !== undefined &&
+        maxNumber !== undefined &&
+        prizeState &&
+        currentPrize !== undefined &&
+        drawCount !== undefined
+      ) {
         saveData(
           drawnNumbers,
           remainingNumbers,
           blacklist || [],
           whitelist || [],
           drawHistory || [],
-          maxNumber
+          minNumber,
+          maxNumber,
+          prizeState,
+          currentPrize,
+          drawCount,
         );
       }
       return;
@@ -98,7 +128,11 @@ export function useLocalStorage() {
       blacklist ?? currentData.blacklist,
       whitelist ?? currentData.whitelist,
       drawHistory ?? currentData.drawHistory,
-      maxNumber ?? currentData.maxNumber
+      minNumber ?? currentData.minNumber,
+      maxNumber ?? currentData.maxNumber,
+      prizeState ?? currentData.prizeState,
+      currentPrize ?? currentData.currentPrize ?? 'happiness',
+      drawCount ?? currentData.drawCount ?? 1,
     );
   }, [loadData, saveData]);
 

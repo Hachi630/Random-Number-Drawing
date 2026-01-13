@@ -1,16 +1,15 @@
 // 抽奖号码类型
 export type LotteryNumber = number;
 
-// 抽奖模式
-export type DrawMode = 'single' | 'multiple';
+// 奖项 ID
+export type PrizeId = 'happiness' | 'third' | 'second' | 'first' | 'special';
 
-// 抽奖状态
-export type LotteryState = {
-  pool: Set<LotteryNumber>;
-  drawnNumbers: LotteryNumber[];
-  blacklist: LotteryNumber[];
-  whitelist: LotteryNumber[];
-  drawHistory: DrawRecord[];
+// 奖项配置
+export type PrizeConfig = {
+  id: PrizeId;
+  name: string;
+  total: number;
+  remaining: number;
 };
 
 // 抽奖记录
@@ -20,24 +19,18 @@ export type DrawRecord = {
   prize?: string;
 };
 
-// 抽奖配置
-export type LotteryConfig = {
-  minNumber: number;
-  maxNumber: number;
-  blacklist: LotteryNumber[];
-  whitelist: LotteryNumber[];
-  drawMode: DrawMode;
-  animationDuration: number;
-};
-
 // 存储的数据结构
 export type StoredData = {
+  minNumber: number;
+  maxNumber: number;
   drawnNumbers: LotteryNumber[];
   remainingNumbers: LotteryNumber[];
   blacklist: LotteryNumber[];
   whitelist: LotteryNumber[];
   drawHistory: DrawRecord[];
-  maxNumber?: number;
+  prizeState: PrizeConfig[];
+  currentPrize?: PrizeId;
+  drawCount?: number;
   timestamp: number;
 };
 
