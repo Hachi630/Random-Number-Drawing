@@ -12,9 +12,11 @@ interface ControlPanelProps {
   currentPrize: PrizeId;
   onChangePrize: (id: PrizeId) => void;
   onStart: () => void;
+  onStop: () => void;
   onRedrawOne: () => void;
   onReset: () => void;
   onExport: () => void;
+  isRolling: boolean;
 }
 
 export function ControlPanel({
@@ -28,9 +30,11 @@ export function ControlPanel({
   currentPrize,
   onChangePrize,
   onStart,
+  onStop,
   onRedrawOne,
   onReset,
   onExport,
+  isRolling,
 }: ControlPanelProps) {
   const selectedPrize = prizeState.find((p) => p.id === currentPrize);
 
@@ -51,6 +55,7 @@ export function ControlPanel({
             max={remainingCount || 1}
             value={drawCount}
             onChange={(e) => onChangeDrawCount(Math.max(1, parseInt(e.target.value) || 1))}
+            disabled={isRolling}
           />
         </div>
 
@@ -64,6 +69,7 @@ export function ControlPanel({
               onChange={(e) =>
                 onChangeRange(Math.max(1, parseInt(e.target.value) || 1), maxNumber)
               }
+              disabled={isRolling}
             />
             <span className="range-sep">至</span>
             <input
@@ -76,13 +82,18 @@ export function ControlPanel({
                   Math.max(minNumber + 1, parseInt(e.target.value) || minNumber + 1)
                 )
               }
+              disabled={isRolling}
             />
           </div>
         </div>
 
         <div className="field">
           <label>当前奖项</label>
-          <select value={currentPrize} onChange={(e) => onChangePrize(e.target.value as PrizeId)}>
+          <select
+            value={currentPrize}
+            onChange={(e) => onChangePrize(e.target.value as PrizeId)}
+            disabled={isRolling}
+          >
             {prizeState.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}（剩余 {p.remaining}/{p.total}）
@@ -121,24 +132,30 @@ export function ControlPanel({
       </div>
 
       <div className="control-actions">
-        <button
-          className="btn btn-primary btn-large"
-          onClick={onStart}
-          disabled={remainingCount === 0 || (selectedPrize && selectedPrize.remaining === 0)}
-        >
-          {remainingCount === 0 ? '奖池已空' : '开始抽奖'}
-        </button>
+        {isRolling ? (
+          <button className="btn btn-stop btn-large" onClick={onStop}>
+            停止抽奖
+          </button>
+        ) : (
+          <button
+            className="btn btn-primary btn-large"
+            onClick={onStart}
+            disabled={remainingCount === 0 || (selectedPrize && selectedPrize.remaining === 0)}
+          >
+            {remainingCount === 0 ? '奖池已空' : '开始抽奖'}
+          </button>
+        )}
         <button
           className="btn btn-secondary"
           onClick={onRedrawOne}
-          disabled={remainingCount === 0}
+          disabled={remainingCount === 0 || isRolling}
         >
           补抽一人
         </button>
-        <button className="btn btn-export" onClick={onExport}>
+        <button className="btn btn-export" onClick={onExport} disabled={isRolling}>
           导出名单
         </button>
-        <button className="btn btn-danger" onClick={handleReset}>
+        <button className="btn btn-danger" onClick={handleReset} disabled={isRolling}>
           重置奖池
         </button>
       </div>

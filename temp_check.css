@@ -169,35 +169,8 @@
   background: linear-gradient(120deg, #f45c43, #eb3349);
 }
 
-.btn-stop {
-  background: linear-gradient(120deg, #ff6b6b, #ee5a6f);
-  animation: pulse-stop 1.5s ease-in-out infinite;
-  box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
-}
-
-.btn-stop:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 0 30px rgba(255, 107, 107, 0.7);
-}
-
-@keyframes pulse-stop {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
-  }
-  50% {
-    box-shadow: 0 0 30px rgba(255, 107, 107, 0.8);
-  }
-}
-
 .btn:hover:not(:disabled) {
   transform: translateY(-2px);
-}
-
-.field input:disabled,
-.field select:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background: rgba(0, 0, 0, 0.4);
 }
 
 .remaining-info {

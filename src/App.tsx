@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { LotteryDisplay } from './components/LotteryDisplay';
 import { ControlPanel } from './components/ControlPanel';
 import { WinnerList } from './components/WinnerList';
@@ -37,6 +37,10 @@ function App() {
   const [drawHistory, setDrawHistory] = useState<DrawRecord[]>([]);
   const [multipleNumbers, setMultipleNumbers] = useState<LotteryNumber[] | null>(null);
   const [confettiTrigger, setConfettiTrigger] = useState(false);
+  const [isRolling, setIsRolling] = useState(false);
+  const [rollingNumbers, setRollingNumbers] = useState<LotteryNumber[] | null>(null);
+  const rollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const slowdownTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     currentNumber,
@@ -95,19 +99,35 @@ function App() {
     totalNumbers,
   ]);
 
-  const displayNumbers =
-    multipleNumbers ??
-    (drawHistory.length > 0
-      ? drawHistory[drawHistory.length - 1].numbers
-      : currentNumber !== null
-        ? [currentNumber]
-        : null);
+  // 显示逻辑：滚动中显示滚动数字，否则显示最终结果
+  const displayNumbers = isRolling
+    ? rollingNumbers
+    : multipleNumbers ??
+      (drawHistory.length > 0
+        ? drawHistory[drawHistory.length - 1].numbers
+        : currentNumber !== null
+          ? [currentNumber]
+          : null);
 
   const triggerConfetti = () => {
     setConfettiTrigger(true);
     setTimeout(() => setConfettiTrigger(false), 100);
   };
 
+  // 生成随机数字用于滚动动画
+  const generateRandomNumbers = useCallback(
+    (count: number): LotteryNumber[] => {
+      const numbers: LotteryNumber[] = [];
+      for (let i = 0; i < count; i++) {
+        const randomNum = Math.floor(Math.random() * (maxNumber - minNumber + 1)) + minNumber;
+        numbers.push(randomNum as LotteryNumber);
+      }
+      return numbers;
+    },
+    [minNumber, maxNumber]
+  );
+
+  // 实际抽取逻辑
   const handleDraw = useCallback(
     (count: number) => {
       const prize = prizeState.find((p) => p.id === currentPrize);
@@ -144,22 +164,119 @@ function App() {
     [currentPrize, drawMultiple, prizeState, remainingCount]
   );
 
+  // 开始滚动动画
   const handleStart = useCallback(() => {
-    handleDraw(drawCount);
-  }, [handleDraw, drawCount]);
+    const prize = prizeState.find((p) => p.id === currentPrize);
+    if (!prize) {
+      alert('请选择奖项');
+      return;
+    }
+    if (prize.remaining <= 0) {
+      alert(`${prize.name} 的名额已全部抽完`);
+      return;
+    }
+    if (remainingCount <= 0) {
+      alert('奖池已空');
+      return;
+    }
+
+    // 进入滚动状态
+    setIsRolling(true);
+    const actualCount = Math.min(drawCount, prize.remaining, remainingCount);
+    
+    // 初始化滚动数字
+    setRollingNumbers(generateRandomNumbers(actualCount));
+
+    // 快速滚动阶段：每 50ms 更新一次
+    const speed = 50;
+
+    const interval = setInterval(() => {
+      setRollingNumbers(generateRandomNumbers(actualCount));
+    }, speed);
+
+    rollIntervalRef.current = interval;
+  }, [drawCount, currentPrize, prizeState, remainingCount, generateRandomNumbers]);
+
+  // 停止滚动并执行实际抽取
+  const handleStop = useCallback(() => {
+    if (!isRolling || !rollIntervalRef.current) return;
+
+    // 清除滚动定时器
+    clearInterval(rollIntervalRef.current);
+    rollIntervalRef.current = null;
+
+    // 减速阶段：逐渐减慢到最终数字
+    const actualCount = Math.min(
+      drawCount,
+      prizeState.find((p) => p.id === currentPrize)?.remaining ?? 0,
+      remainingCount
+    );
+
+    let speed = 100;
+    const maxSlowdownTime = 800; // 减速阶段最多 0.8 秒
+    const startTime = Date.now();
+
+    const slowdown = () => {
+      setRollingNumbers(generateRandomNumbers(actualCount));
+      speed = Math.min(300, speed + 30); // 逐渐减慢
+
+      const elapsed = Date.now() - startTime;
+      if (elapsed < maxSlowdownTime && speed < 300) {
+        slowdownTimeoutRef.current = setTimeout(slowdown, speed);
+      } else {
+        // 执行实际抽取
+        handleDraw(actualCount);
+        setIsRolling(false);
+        setRollingNumbers(null);
+        slowdownTimeoutRef.current = null;
+      }
+    };
+
+    slowdownTimeoutRef.current = setTimeout(slowdown, speed);
+  }, [isRolling, drawCount, currentPrize, prizeState, remainingCount, generateRandomNumbers, handleDraw]);
+
+  // 清理定时器
+  useEffect(() => {
+    return () => {
+      if (rollIntervalRef.current) {
+        clearInterval(rollIntervalRef.current);
+      }
+      if (slowdownTimeoutRef.current) {
+        clearTimeout(slowdownTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleRedrawOne = useCallback(() => {
+    if (isRolling) {
+      alert('请先停止当前抽奖');
+      return;
+    }
     handleDraw(1);
-  }, [handleDraw]);
+  }, [handleDraw, isRolling]);
 
   const handleReset = useCallback(() => {
+    if (isRolling) {
+      alert('请先停止当前抽奖');
+      return;
+    }
     if (!window.confirm('此操作会清空所有记录并重建奖池，确认吗？')) return;
     reset(minNumber, maxNumber);
     setDrawHistory([]);
     setPrizeState(createPrizeState());
     setMultipleNumbers(null);
+    setRollingNumbers(null);
+    setIsRolling(false);
+    if (rollIntervalRef.current) {
+      clearInterval(rollIntervalRef.current);
+      rollIntervalRef.current = null;
+    }
+    if (slowdownTimeoutRef.current) {
+      clearTimeout(slowdownTimeoutRef.current);
+      slowdownTimeoutRef.current = null;
+    }
     clearData();
-  }, [reset, minNumber, maxNumber, clearData]);
+  }, [reset, minNumber, maxNumber, clearData, isRolling]);
 
   const handleRangeChange = useCallback(
     (newMin: number, newMax: number) => {
@@ -195,10 +312,15 @@ function App() {
 
   useKeyboardControl({
     onSpace: () => {
-      if (remainingCount > 0) {
-        handleStart();
+      if (isRolling) {
+        handleStop();
+      } else {
+        if (remainingCount > 0) {
+          handleStart();
+        }
       }
     },
+    enabled: true,
   });
 
   return (
@@ -209,6 +331,7 @@ function App() {
           title={EVENT_TITLE}
           prizeName={PRIZE_PRESET[currentPrize].name}
           numbers={displayNumbers}
+          isRolling={isRolling}
         />
 
         <div className="bottom-panels">
@@ -223,9 +346,11 @@ function App() {
             currentPrize={currentPrize}
             onChangePrize={setCurrentPrize}
             onStart={handleStart}
+            onStop={handleStop}
             onRedrawOne={handleRedrawOne}
             onReset={handleReset}
             onExport={handleExport}
+            isRolling={isRolling}
           />
 
           <WinnerList drawHistory={drawHistory} />
